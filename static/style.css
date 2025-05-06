@@ -224,6 +224,28 @@ tr:hover {
     background-color: rgba(243, 156, 18, 0.8);
 }
 
+/* Botón de eliminar */
+.btn-delete {
+    background-color: transparent;
+    border: none;
+    color: var(--danger-color);
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-delete:hover {
+    background-color: rgba(231, 76, 60, 0.1);
+    color: #c0392b;
+}
+
+.delete-form {
+    margin: 0;
+    padding: 0;
+    display: inline-block;
+}
+
 /* Footer */
 footer {
     text-align: center;
@@ -291,5 +313,20 @@ footer {
     
     .color-count {
         justify-content: flex-end;
+    }
+    
+    /* Ajustes para el botón de eliminar en móvil */
+    td[data-label="Acciones"] {
+        justify-content: center;
+        padding: 10px;
+    }
+    
+    td[data-label="Acciones"]:before {
+        display: none;
+    }
+    
+    .btn-delete {
+        padding: 8px 12px;
+        font-size: 1.1em;
     }
 }

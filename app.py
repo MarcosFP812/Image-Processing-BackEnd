@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, render_template, abort
+from flask import Flask, request, jsonify, render_template, abort, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from datetime import datetime, timezone
@@ -117,8 +117,8 @@ def view_data():
         # Recuperar todos los datos, ordenados por fecha descendente
         all_entries = ImageData.query.order_by(ImageData.timestamp.desc()).all()
         print(f"Recuperados {len(all_entries)} registros de la base de datos.")
-        # Renderizar la plantilla HTML pasando los datos
-        return render_template('index.html', image_data_list=all_entries)
+        # Renderizar la plantilla HTML pasando los datos y la fecha actual
+        return render_template('index.html', image_data_list=all_entries, now=datetime.now())
     except Exception as e:
         print(f"Error al recuperar datos para el visor web: {e}")
         # Podrías mostrar una página de error más elegante
@@ -138,6 +138,27 @@ def get_data_api():
     except Exception as e:
         print(f"Error en API /get_data: {e}")
         return jsonify({"error": f"Failed to retrieve data: {str(e)}"}), 500
+
+# --- Nueva ruta para eliminar registros ---
+@app.route('/delete/<int:record_id>', methods=['POST'])
+def delete_record(record_id):
+    """Elimina un registro de la base de datos según su ID."""
+    print(f"Recibida petición para eliminar registro con ID: {record_id}")
+    try:
+        # Buscar el registro por ID
+        record = ImageData.query.get_or_404(record_id)
+        
+        # Eliminar el registro
+        db.session.delete(record)
+        db.session.commit()
+        print(f"Registro con ID {record_id} eliminado correctamente.")
+        
+        # Redirigir a la página principal
+        return redirect(url_for('view_data'))
+    except Exception as e:
+        db.session.rollback()  # Revertir cambios en caso de error
+        print(f"Error al eliminar registro {record_id}: {e}")
+        abort(500, description=f"Error deleting record: {str(e)}")
 
 # --- Ejecución (para desarrollo local) ---
 if __name__ == '__main__':

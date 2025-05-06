@@ -54,6 +54,7 @@
                         <th data-sort="green_count">Verde <i class="fas fa-sort"></i></th>
                         <th data-sort="blue_count">Azul <i class="fas fa-sort"></i></th>
                         <th data-sort="other_count">Otros <i class="fas fa-sort"></i></th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -87,6 +88,13 @@
                                     <span class="color-dot"></span>
                                     <span class="count">{{ item.other_count }}</span>
                                 </div>
+                            </td>
+                            <td data-label="Acciones">
+                                <form action="{{ url_for('delete_record', record_id=item.id) }}" method="post" class="delete-form" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este registro?');">
+                                    <button type="submit" class="btn-delete" title="Eliminar registro">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                         {% endfor %}
