@@ -1,195 +1,147 @@
 import os
-import psycopg2
-from flask import Flask, request, jsonify, render_template, g
-from dotenv import load_dotenv
-import datetime
+from flask import Flask, request, jsonify, render_template, abort
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from datetime import datetime, timezone
+from dateutil import parser # Para parsear fechas ISO 8601 de forma robusta
 
-# Load environment variables for local development
-# In Azure App Service, these will be set in the Configuration
-load_dotenv()
+# --- Inicialización ---
+app = Flask(__name__, static_folder='static', template_folder='templates')
 
-app = Flask(__name__)
+# Carga la configuración (Development o Production)
+from config import app_config
+app.config.from_object(app_config)
 
-# --- Database Configuration ---
-def get_db_config():
-    """Gets database configuration from environment variables."""
-    # Use Azure Service Connector variables if available, otherwise use .env file vars
-    config = {
-        "host": os.environ.get("AZURE_POSTGRESQL_HOST") or os.environ.get("DB_HOST"),
-        "database": os.environ.get("AZURE_POSTGRESQL_DATABASE") or os.environ.get("DB_NAME"),
-        "user": os.environ.get("AZURE_POSTGRESQL_USER") or os.environ.get("DB_USER"),
-        "password": os.environ.get("AZURE_POSTGRESQL_PASSWORD") or os.environ.get("DB_PASSWORD"),
-        "port": os.environ.get("DB_PORT", 5432), # Default to 5432 if not set
-        "sslmode": os.environ.get("DB_SSLMODE", "require") # Default to require for Azure PG
-    }
-    # Basic validation
-    if not all([config["host"], config["database"], config["user"], config["password"]]):
-        raise ValueError("Database configuration is incomplete. Check environment variables.")
-    return config
+# Inicializa extensiones
+db = SQLAlchemy(app)
+migrate = Migrate(app, db) # Para gestionar migraciones de BD
 
-def get_db():
-    """Opens a new database connection if there is none yet for the current application context."""
-    if 'db' not in g:
-        try:
-            config = get_db_config()
-            app.logger.info(f"Connecting to DB: host={config['host']}, db={config['database']}, user={config['user']}")
-            g.db = psycopg2.connect(
-                host=config["host"],
-                database=config["database"],
-                user=config["user"],
-                password=config["password"],
-                port=config["port"],
-                sslmode=config["sslmode"] # Important for Azure PostgreSQL
-            )
-        except psycopg2.Error as e:
-            app.logger.error(f"Database connection error: {e}")
-            # Decide how to handle this - maybe return an error or raise exception
-            raise ConnectionError(f"Could not connect to the database: {e}") from e
-    return g.db
+# Importa modelos DESPUÉS de inicializar db
+from models import ImageData
 
-@app.teardown_appcontext
-def close_db(error):
-    """Closes the database again at the end of the request."""
-    db = g.pop('db', None)
-    if db is not None:
-        db.close()
-    if error:
-      app.logger.error(f"App Context teardown error: {error}")
+# --- Creación de Tablas (Solo si no existen) ---
+# En un entorno real con migraciones, esto se haría con 'flask db upgrade'
+# Pero para un inicio rápido, esto asegura que la tabla exista la primera vez.
+with app.app_context():
+    print("Intentando crear tablas si no existen...")
+    db.create_all()
+    print("Llamada a db.create_all() completada.")
 
-def init_db():
-    """Initializes the database schema (creates table if not exists)."""
-    db = get_db()
-    cursor = db.cursor()
-    try:
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS image_data (
-                id SERIAL PRIMARY KEY,
-                filename VARCHAR(255) NOT NULL,
-                upload_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                username VARCHAR(100) NOT NULL,
-                red_pixels INTEGER,
-                green_pixels INTEGER,
-                blue_pixels INTEGER,
-                other_pixels INTEGER -- Pixels not matching R, G, or B, or grayscale pixels
-            );
-        """)
-        db.commit()
-        app.logger.info("Database table 'image_data' checked/created.")
-    except psycopg2.Error as e:
-        db.rollback() # Rollback in case of error during table creation
-        app.logger.error(f"Error initializing database table: {e}")
-    finally:
-        cursor.close()
+# --- Rutas de la API ---
 
-# Initialize DB on first request (alternative: run this manually or via a startup script)
-@app.before_request
-def before_request_func():
-    # Only initialize DB once per application lifetime or check existence more carefully
-    # For simplicity, let's try initializing on each request start, CREATE IF NOT EXISTS handles it.
-    # A better approach might be using app.cli.command or checking a global flag.
-    if not getattr(g, 'db_initialized', False):
-      try:
-        init_db()
-        g.db_initialized = True # Mark as initialized for this app instance lifetime
-      except ConnectionError as e:
-         # Log or handle the fact that DB connection failed during init
-         app.logger.error(f"DB initialization failed: {e}")
-         # Maybe set a flag to prevent further DB operations or return error response
-
-# --- API Endpoint ---
 @app.route('/upload_data', methods=['POST'])
 def upload_data():
-    """Receives image processing data from Scala client and stores it."""
+    """
+    Endpoint para recibir datos desde la aplicación Scala.
+    Espera un JSON con: filename, username, timestamp, color_counts (Map/Dict).
+    """
+    print("Recibida petición POST en /upload_data")
     if not request.is_json:
+        print("Error: La petición no contiene JSON")
         return jsonify({"error": "Request must be JSON"}), 400
 
     data = request.get_json()
-    app.logger.info(f"Received data: {data}") # Log received data
+    print(f"Datos JSON recibidos: {data}")
 
-    # Basic Validation
+    # Validación básica de campos requeridos
     required_fields = ['filename', 'username', 'timestamp', 'color_counts']
     if not all(field in data for field in required_fields):
-        return jsonify({"error": "Missing required fields", "required": required_fields}), 400
-    if not isinstance(data['color_counts'], dict):
-         return jsonify({"error": "'color_counts' must be an object"}), 400
+        print(f"Error: Faltan campos requeridos. Necesarios: {required_fields}")
+        return jsonify({"error": "Missing required fields"}), 400
 
-    filename = data.get('filename')
-    username = data.get('username')
-    timestamp_str = data.get('timestamp') # Expecting ISO 8601 format string from Scala
     color_counts = data.get('color_counts', {})
+    if not isinstance(color_counts, dict):
+        print("Error: 'color_counts' debe ser un objeto JSON (diccionario).")
+        return jsonify({"error": "'color_counts' must be an object"}), 400
 
-    # Parse timestamp (handle potential errors)
+    # Parsear timestamp (Scala envía ISO 8601)
     try:
-        upload_time = datetime.datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-    except (ValueError, TypeError) as e:
-        app.logger.error(f"Invalid timestamp format: {timestamp_str}. Error: {e}")
-        return jsonify({"error": f"Invalid timestamp format: {timestamp_str}. Use ISO 8601."}), 400
+        # Usamos dateutil.parser para más flexibilidad con formatos ISO 8601
+        # Si el timestamp no tiene zona horaria, asumimos UTC
+        timestamp_str = data['timestamp']
+        parsed_timestamp = parser.isoparse(timestamp_str)
+        # Si no tiene timezone info, lo hacemos 'aware' asumiendo UTC
+        if parsed_timestamp.tzinfo is None:
+             parsed_timestamp = parsed_timestamp.replace(tzinfo=timezone.utc)
+        # Convertimos a UTC para almacenar de forma consistente
+        timestamp_utc = parsed_timestamp.astimezone(timezone.utc)
+        print(f"Timestamp parseado a UTC: {timestamp_utc}")
 
-    # Extract counts (handle missing keys gracefully)
-    red_pixels = color_counts.get('Red', 0)
-    green_pixels = color_counts.get('Green', 0)
-    blue_pixels = color_counts.get('Blue', 0)
-    other_pixels = color_counts.get('Other', 0) # Or 'Gray' depending on Scala implementation
+    except ValueError as e:
+        print(f"Error parseando timestamp '{data['timestamp']}': {e}")
+        return jsonify({"error": f"Invalid timestamp format: {e}"}), 400
+    except Exception as e:
+        print(f"Error inesperado procesando timestamp: {e}")
+        return jsonify({"error": f"Error processing timestamp: {e}"}), 500
 
+
+    # Crear instancia del modelo
     try:
-        db = get_db()
-        cursor = db.cursor()
-        cursor.execute(
-            """
-            INSERT INTO image_data (filename, upload_timestamp, username, red_pixels, green_pixels, blue_pixels, other_pixels)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """,
-            (filename, upload_time, username, red_pixels, green_pixels, blue_pixels, other_pixels)
+        new_data = ImageData(
+            filename=data['filename'],
+            username=data['username'],
+            timestamp=timestamp_utc,
+            # Obtener conteos, con valor por defecto 0 si no vienen
+            red_count=color_counts.get('Red', 0),
+            green_count=color_counts.get('Green', 0),
+            blue_count=color_counts.get('Blue', 0),
+            other_count=color_counts.get('Other', 0)
         )
-        db.commit()
-        cursor.close()
-        app.logger.info(f"Data for {filename} by {username} inserted successfully.")
-        return jsonify({"message": "Data uploaded successfully"}), 201
-    except (psycopg2.Error, ConnectionError) as e:
-        # Rollback in case of DB error during insert
-        db_conn = g.get('db')
-        if db_conn:
-            db_conn.rollback()
-        app.logger.error(f"Database error during insert: {e}")
-        return jsonify({"error": f"Database error: {e}"}), 500
+        print(f"Objeto ImageData creado: {new_data}")
+
+        # Guardar en la base de datos
+        db.session.add(new_data)
+        db.session.commit()
+        print("Datos guardados en la base de datos con éxito.")
+
+        # Devolver respuesta de éxito
+        # Usamos el método to_dict() si quieres devolver el objeto creado
+        # return jsonify(new_data.to_dict()), 201
+        return jsonify({"message": "Data received and stored successfully"}), 201
+
     except Exception as e:
-        # Catch other unexpected errors
-        app.logger.error(f"Unexpected error during upload: {e}")
-        return jsonify({"error": f"An unexpected error occurred: {e}"}), 500
+        db.session.rollback() # Revertir cambios en caso de error
+        print(f"Error al guardar en la base de datos: {e}")
+        # Considera loggear el error completo aquí para depuración
+        # import traceback
+        # traceback.print_exc()
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
 
+# --- Rutas del Visor Web ---
 
-# --- Web Visor Endpoint ---
-@app.route('/view_data', methods=['GET'])
+@app.route('/', methods=['GET'])
 def view_data():
-    """Retrieves data from the database and displays it in an HTML table."""
+    """Muestra los datos almacenados en una tabla HTML."""
+    print("Recibida petición GET en /")
     try:
-        db = get_db()
-        cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor) # Fetch rows as dictionaries
-        # Fetch data ordered by timestamp descending
-        cursor.execute("SELECT * FROM image_data ORDER BY upload_timestamp DESC")
-        results = cursor.fetchall()
-        cursor.close()
-        # Render the HTML template, passing the data to it
-        return render_template('view.html', image_entries=results)
-    except (psycopg2.Error, ConnectionError) as e:
-         app.logger.error(f"Database error during fetch: {e}")
-         # Render an error page or return a simple error message
-         return f"Error retrieving data from database: {e}", 500
+        # Recuperar todos los datos, ordenados por fecha descendente
+        all_entries = ImageData.query.order_by(ImageData.timestamp.desc()).all()
+        print(f"Recuperados {len(all_entries)} registros de la base de datos.")
+        # Renderizar la plantilla HTML pasando los datos
+        return render_template('index.html', image_data_list=all_entries)
     except Exception as e:
-        app.logger.error(f"Unexpected error during view: {e}")
-        return f"An unexpected error occurred: {e}", 500
+        print(f"Error al recuperar datos para el visor web: {e}")
+        # Podrías mostrar una página de error más elegante
+        abort(500, description=f"Error retrieving data from database: {str(e)}")
 
-# --- Root Endpoint (Optional) ---
-@app.route('/')
-def home():
-    """Simple home page linking to the data viewer."""
-    return """
-    <h1>PECL2 Scala/Cloud Integration</h1>
-    <p><a href="/view_data">View Uploaded Image Data</a></p>
-    """
 
+@app.route('/get_data', methods=['GET'])
+def get_data_api():
+    """Endpoint API opcional para obtener todos los datos en formato JSON."""
+    print("Recibida petición GET en /get_data")
+    try:
+        all_entries = ImageData.query.order_by(ImageData.timestamp.desc()).all()
+        # Convierte cada objeto ImageData a un diccionario usando el método to_dict()
+        data_list = [entry.to_dict() for entry in all_entries]
+        print(f"Devolviendo {len(data_list)} registros como JSON.")
+        return jsonify(data_list), 200
+    except Exception as e:
+        print(f"Error en API /get_data: {e}")
+        return jsonify({"error": f"Failed to retrieve data: {str(e)}"}), 500
+
+# --- Ejecución (para desarrollo local) ---
 if __name__ == '__main__':
-    # Set debug=True for local development ONLY
-    # Azure App Service uses Gunicorn or another production server
-    port = int(os.environ.get("PORT", 5000)) # Use PORT environment variable if available
-    app.run(host='0.0.0.0', port=port, debug=False) # Set debug=False for production/Azure
+    # Ejecuta `flask run` en la terminal en lugar de `python app.py`
+    # `flask run` utiliza las variables de entorno FLASK_APP y FLASK_DEBUG
+    print("Para ejecutar la aplicación localmente, usa el comando: flask run")
+    # app.run() # No se recomienda para desarrollo con auto-reload, usa `flask run`

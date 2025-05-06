@@ -1,0 +1,79 @@
+/* Puedes mover los estilos del <style> en index.html aquí */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 20px;
+    color: #333;
+}
+
+h1 {
+    color: #005a9e; /* Un azul corporativo */
+    border-bottom: 2px solid #005a9e;
+    padding-bottom: 10px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 10px 12px; /* Más padding */
+    text-align: left;
+    vertical-align: top; /* Alinear arriba si el texto es largo */
+}
+
+th {
+    background-color: #eef4f8; /* Un azul claro */
+    color: #005a9e;
+    font-weight: bold;
+}
+
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+tr:hover {
+    background-color: #e6f2ff; /* Resaltado suave al pasar el ratón */
+}
+
+.no-data {
+    font-style: italic;
+    color: #888;
+    text-align: center;
+}
+
+/* Responsive básico */
+@media (max-width: 768px) {
+    table, thead, tbody, th, td, tr {
+        display: block;
+    }
+    thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+    tr { border: 1px solid #ccc; margin-bottom: 10px; }
+    td {
+        border: none;
+        border-bottom: 1px solid #eee;
+        position: relative;
+        padding-left: 50%;
+        text-align: right; /* Alinear datos a la derecha */
+    }
+    td:before {
+        position: absolute;
+        left: 6px;
+        width: 45%;
+        padding-right: 10px;
+        white-space: nowrap;
+        text-align: left; /* Alinear etiquetas a la izquierda */
+        font-weight: bold;
+        /* Contenido de la etiqueta usando atributos data-* */
+        content: attr(data-label);
+    }
+     /* Añadir atributos data-label en index.html si usas esta parte responsive */
+     /* Ejemplo: <td data-label="Usuario">{{ item.username }}</td> */
+}

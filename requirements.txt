@@ -1,3 +1,8 @@
-Flask>=2.0
-psycopg2-binary>=2.9  # PostgreSQL adapter
-python-dotenv>=0.19   # To load .env for local development
+Flask
+Flask-SQLAlchemy
+Flask-Migrate
+psycopg2-binary  # Adaptador PostgreSQL (binario para fácil instalación)
+python-dotenv    # Para leer el archivo .env localmente
+SQLAlchemy       # ORM (generalmente incluido por Flask-SQLAlchemy)
+gunicorn         # Servidor WSGI para producción en Azure
+python-dateutil  # Para parseo robusto de fechas ISO 8601
