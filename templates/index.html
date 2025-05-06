@@ -21,7 +21,7 @@
                 </div>
                 <div class="stat-card">
                     <i class="fas fa-calendar"></i>
-                    <span>{{ now.strftime('%d/%m/%Y') }}</span>
+                    <span>{% if now %}{{ now.strftime('%d/%m/%Y') }}{% else %}{{ '{:%d/%m/%Y}'.format(now) if now else 'Fecha actual' }}{% endif %}</span>
                 </div>
             </div>
         </header>
@@ -110,7 +110,7 @@
         </div>
 
         <footer>
-            <p>&copy; {{ now.year }} Sistema de Análisis de Imágenes</p>
+            <p>&copy; {% if now %}{{ now.year }}{% else %}{{ '{:%Y}'.format(now) if now else '2025' }}{% endif %} Sistema de Análisis de Imágenes</p>
         </footer>
     </div>
 

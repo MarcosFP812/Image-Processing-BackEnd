@@ -114,14 +114,22 @@ def view_data():
     """Muestra los datos almacenados en una tabla HTML."""
     print("Recibida petición GET en /")
     try:
+        # Obtener la fecha actual para pasarla a la plantilla
+        current_time = datetime.now()
+        print(f"Fecha actual: {current_time}")
+        
         # Recuperar todos los datos, ordenados por fecha descendente
         all_entries = ImageData.query.order_by(ImageData.timestamp.desc()).all()
         print(f"Recuperados {len(all_entries)} registros de la base de datos.")
+        
         # Renderizar la plantilla HTML pasando los datos y la fecha actual
-        return render_template('index.html', image_data_list=all_entries, now=datetime.now())
+        return render_template('index.html', image_data_list=all_entries, now=current_time)
     except Exception as e:
         print(f"Error al recuperar datos para el visor web: {e}")
-        # Podrías mostrar una página de error más elegante
+        # Loggear el error completo para depuración
+        import traceback
+        traceback.print_exc()
+        # Mostrar página de error
         abort(500, description=f"Error retrieving data from database: {str(e)}")
 
 
@@ -158,6 +166,9 @@ def delete_record(record_id):
     except Exception as e:
         db.session.rollback()  # Revertir cambios en caso de error
         print(f"Error al eliminar registro {record_id}: {e}")
+        # Loggear el error completo para depuración
+        import traceback
+        traceback.print_exc()
         abort(500, description=f"Error deleting record: {str(e)}")
 
 # --- Ejecución (para desarrollo local) ---
