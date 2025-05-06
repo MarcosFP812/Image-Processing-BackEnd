@@ -5,54 +5,224 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visor de Datos de Imágenes</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        /* Estilos básicos si no usas un archivo CSS externo */
-        body { font-family: sans-serif; margin: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        tr:hover { background-color: #e2e2e2; }
-        .no-data { font-style: italic; color: #888; }
-    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <h1>Datos de Procesamiento de Imágenes</h1>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-image"></i>
+                <h1>Visor de Datos de Imágenes</h1>
+            </div>
+            <div class="stats-summary">
+                <div class="stat-card">
+                    <i class="fas fa-database"></i>
+                    <span>{{ image_data_list|length }} registros</span>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-calendar"></i>
+                    <span>{{ now.strftime('%d/%m/%Y') }}</span>
+                </div>
+            </div>
+        </header>
 
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Usuario</th>
-                <th>Timestamp (UTC)</th>
-                <th>Nombre Archivo</th>
-                <th>Rojo</th>
-                <th>Verde</th>
-                <th>Azul</th>
-                <th>Otros</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% if image_data_list %}
-                {% for item in image_data_list %}
-                <tr>
-                    <td>{{ item.id }}</td>
-                    <td>{{ item.username }}</td>
-                    <td>{{ item.timestamp.strftime('%Y-%m-%d %H:%M:%S') if item.timestamp else 'N/A' }}</td>
-                    <td>{{ item.filename }}</td>
-                    <td>{{ item.red_count }}</td>
-                    <td>{{ item.green_count }}</td>
-                    <td>{{ item.blue_count }}</td>
-                    <td>{{ item.other_count }}</td>
-                </tr>
-                {% endfor %}
-            {% else %}
-                <tr>
-                    <td colspan="8" class="no-data">No hay datos disponibles para mostrar.</td>
-                </tr>
-            {% endif %}
-        </tbody>
-    </table>
+        <div class="search-filters">
+            <div class="search-container">
+                <div class="search-field">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="userSearch" placeholder="Buscar por usuario...">
+                </div>
+                <div class="search-field">
+                    <i class="fas fa-file"></i>
+                    <input type="text" id="fileSearch" placeholder="Buscar por nombre de archivo..."> 
+                </div>
+            </div>
+            <button id="clearFilters" class="btn">
+                <i class="fas fa-times"></i> Limpiar filtros
+            </button>
+        </div>
+        
+        <div class="table-container">
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th data-sort="id">ID <i class="fas fa-sort"></i></th>
+                        <th data-sort="username">Usuario <i class="fas fa-sort"></i></th>
+                        <th data-sort="timestamp">Timestamp (UTC) <i class="fas fa-sort"></i></th>
+                        <th data-sort="filename">Nombre Archivo <i class="fas fa-sort"></i></th>
+                        <th data-sort="red_count">Rojo <i class="fas fa-sort"></i></th>
+                        <th data-sort="green_count">Verde <i class="fas fa-sort"></i></th>
+                        <th data-sort="blue_count">Azul <i class="fas fa-sort"></i></th>
+                        <th data-sort="other_count">Otros <i class="fas fa-sort"></i></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if image_data_list %}
+                        {% for item in image_data_list %}
+                        <tr>
+                            <td data-label="ID">{{ item.id }}</td>
+                            <td data-label="Usuario">{{ item.username }}</td>
+                            <td data-label="Timestamp">{{ item.timestamp.strftime('%Y-%m-%d %H:%M:%S') if item.timestamp else 'N/A' }}</td>
+                            <td data-label="Archivo">{{ item.filename }}</td>
+                            <td data-label="Rojo">
+                                <div class="color-count red">
+                                    <span class="color-dot"></span>
+                                    <span class="count">{{ item.red_count }}</span>
+                                </div>
+                            </td>
+                            <td data-label="Verde">
+                                <div class="color-count green">
+                                    <span class="color-dot"></span>
+                                    <span class="count">{{ item.green_count }}</span>
+                                </div>
+                            </td>
+                            <td data-label="Azul">
+                                <div class="color-count blue">
+                                    <span class="color-dot"></span>
+                                    <span class="count">{{ item.blue_count }}</span>
+                                </div>
+                            </td>
+                            <td data-label="Otros">
+                                <div class="color-count other">
+                                    <span class="color-dot"></span>
+                                    <span class="count">{{ item.other_count }}</span>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="no-data">
+                                <i class="fas fa-info-circle"></i> No hay datos disponibles para mostrar.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
 
+        <footer>
+            <p>&copy; {{ now.year }} Sistema de Análisis de Imágenes</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const table = document.getElementById('dataTable');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const userSearch = document.getElementById('userSearch');
+            const fileSearch = document.getElementById('fileSearch');
+            const clearFiltersBtn = document.getElementById('clearFilters');
+            const sortHeaders = document.querySelectorAll('th[data-sort]');
+            
+            let sortColumn = 'id';
+            let sortDirection = 'asc';
+            let originalRows = [...rows];
+
+            // Función para ordenar la tabla
+            function sortTable(column) {
+                if (sortColumn === column) {
+                    // Cambiar dirección si es la misma columna
+                    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortColumn = column;
+                    sortDirection = 'asc';
+                }
+
+                // Actualizar íconos
+                sortHeaders.forEach(header => {
+                    const icon = header.querySelector('i');
+                    if (header.dataset.sort === column) {
+                        icon.className = sortDirection === 'asc' 
+                            ? 'fas fa-sort-up' 
+                            : 'fas fa-sort-down';
+                    } else {
+                        icon.className = 'fas fa-sort';
+                    }
+                });
+
+                // Ordenar filas
+                rows.sort((a, b) => {
+                    let aValue = a.querySelector(`td[data-label="${getColumnLabel(column)}"]`).textContent.trim();
+                    let bValue = b.querySelector(`td[data-label="${getColumnLabel(column)}"]`).textContent.trim();
+                    
+                    // Si es una columna numérica
+                    if (['id', 'red_count', 'green_count', 'blue_count', 'other_count'].includes(column)) {
+                        aValue = parseInt(aValue) || 0;
+                        bValue = parseInt(bValue) || 0;
+                    } 
+                    // Si es timestamp, convertir a fecha
+                    else if (column === 'timestamp') {
+                        aValue = new Date(aValue);
+                        bValue = new Date(bValue);
+                    }
+                    
+                    // Ordenar
+                    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+                    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+                    return 0;
+                });
+
+                // Redibujar tabla
+                tbody.innerHTML = '';
+                rows.forEach(row => tbody.appendChild(row));
+            }
+            
+            // Mapeo de columnas para obtener el label correcto
+            function getColumnLabel(column) {
+                const map = {
+                    'id': 'ID',
+                    'username': 'Usuario',
+                    'timestamp': 'Timestamp',
+                    'filename': 'Archivo',
+                    'red_count': 'Rojo',
+                    'green_count': 'Verde',
+                    'blue_count': 'Azul',
+                    'other_count': 'Otros'
+                };
+                return map[column];
+            }
+
+            // Función para filtrar la tabla
+            function filterTable() {
+                const userFilter = userSearch.value.toLowerCase();
+                const fileFilter = fileSearch.value.toLowerCase();
+                
+                rows.forEach(row => {
+                    const username = row.querySelector('td[data-label="Usuario"]').textContent.toLowerCase();
+                    const filename = row.querySelector('td[data-label="Archivo"]').textContent.toLowerCase();
+                    
+                    const matchesUser = username.includes(userFilter);
+                    const matchesFile = filename.includes(fileFilter);
+                    
+                    // Mostrar fila solo si cumple ambos filtros
+                    row.style.display = (matchesUser && matchesFile) ? '' : 'none';
+                });
+            }
+
+            // Evento de ordenación
+            sortHeaders.forEach(header => {
+                header.addEventListener('click', () => {
+                    const column = header.dataset.sort;
+                    sortTable(column);
+                });
+            });
+
+            // Eventos de búsqueda
+            userSearch.addEventListener('input', filterTable);
+            fileSearch.addEventListener('input', filterTable);
+            
+            // Limpiar filtros
+            clearFiltersBtn.addEventListener('click', () => {
+                userSearch.value = '';
+                fileSearch.value = '';
+                filterTable();
+            });
+
+            // Ordenar inicialmente por ID
+            sortTable('id');
+        });
+    </script>
 </body>
 </html>

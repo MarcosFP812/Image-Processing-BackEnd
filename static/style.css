@@ -1,79 +1,295 @@
-/* Puedes mover los estilos del <style> en index.html aquí */
+/* Estilos globales */
+:root {
+    --primary-color: #2c3e50;
+    --primary-light: #34495e;
+    --accent-color: #3498db;
+    --light-bg: #f5f8fa;
+    --border-color: #dce1e4;
+    --text-color: #333;
+    --text-light: #666;
+    --success-color: #2ecc71;
+    --warning-color: #f39c12;
+    --danger-color: #e74c3c;
+    --shadow: 0 2px 5px rgba(0,0,0,0.08);
+    --transition: all 0.3s ease;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 20px;
-    color: #333;
+    font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+    background-color: var(--light-bg);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Cabecera */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 25px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo i {
+    font-size: 2.2rem;
+    color: var(--accent-color);
 }
 
 h1 {
-    color: #005a9e; /* Un azul corporativo */
-    border-bottom: 2px solid #005a9e;
-    padding-bottom: 10px;
+    color: var(--primary-color);
+    font-size: 1.8rem;
+    font-weight: 600;
+}
+
+.stats-summary {
+    display: flex;
+    gap: 20px;
+}
+
+.stat-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: white;
+    padding: 8px 15px;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+
+.stat-card i {
+    color: var(--accent-color);
+}
+
+/* Filtros y búsqueda */
+.search-filters {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    gap: 15px;
+    align-items: center;
+}
+
+.search-container {
+    display: flex;
+    gap: 15px;
+    flex-grow: 1;
+}
+
+.search-field {
+    position: relative;
+    flex-grow: 1;
+}
+
+.search-field i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-light);
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 12px 12px 12px 38px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 14px;
+    transition: var(--transition);
+}
+
+input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+.btn {
+    background-color: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition);
+}
+
+.btn:hover {
+    background-color: #f5f5f5;
+}
+
+/* Tabla */
+.table-container {
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 30px;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 th, td {
-    border: 1px solid #ddd;
-    padding: 10px 12px; /* Más padding */
+    padding: 15px;
     text-align: left;
-    vertical-align: top; /* Alinear arriba si el texto es largo */
+    border-bottom: 1px solid var(--border-color);
 }
 
 th {
-    background-color: #eef4f8; /* Un azul claro */
-    color: #005a9e;
-    font-weight: bold;
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    cursor: pointer;
+    user-select: none;
+}
+
+th i {
+    margin-left: 5px;
+    font-size: 0.8rem;
+    transition: var(--transition);
 }
 
 tr:nth-child(even) {
-    background-color: #f9f9f9;
+    background-color: var(--light-bg);
 }
 
 tr:hover {
-    background-color: #e6f2ff; /* Resaltado suave al pasar el ratón */
+    background-color: rgba(52, 152, 219, 0.05);
 }
 
 .no-data {
-    font-style: italic;
-    color: #888;
     text-align: center;
+    padding: 40px 0;
+    color: var(--text-light);
+    font-style: italic;
 }
 
-/* Responsive básico */
+.no-data i {
+    margin-right: 8px;
+    color: var(--text-light);
+}
+
+/* Color dots */
+.color-count {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.color-dot {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+}
+
+.red .color-dot {
+    background-color: rgba(231, 76, 60, 0.8);
+}
+
+.green .color-dot {
+    background-color: rgba(46, 204, 113, 0.8);
+}
+
+.blue .color-dot {
+    background-color: rgba(52, 152, 219, 0.8);
+}
+
+.other .color-dot {
+    background-color: rgba(243, 156, 18, 0.8);
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 20px 0;
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .search-filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-container {
+        flex-direction: column;
+    }
+    
+    .stats-summary {
+        margin-top: 15px;
+        justify-content: flex-start;
+    }
+}
+
 @media (max-width: 768px) {
     table, thead, tbody, th, td, tr {
         display: block;
     }
+    
     thead tr {
         position: absolute;
         top: -9999px;
         left: -9999px;
     }
-    tr { border: 1px solid #ccc; margin-bottom: 10px; }
+    
+    tr {
+        border-bottom: 2px solid var(--border-color);
+        margin-bottom: 15px;
+    }
+    
     td {
         border: none;
         border-bottom: 1px solid #eee;
         position: relative;
         padding-left: 50%;
-        text-align: right; /* Alinear datos a la derecha */
+        text-align: right;
+        min-height: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
     }
+    
     td:before {
         position: absolute;
-        left: 6px;
+        left: 15px;
         width: 45%;
         padding-right: 10px;
         white-space: nowrap;
-        text-align: left; /* Alinear etiquetas a la izquierda */
+        text-align: left;
         font-weight: bold;
-        /* Contenido de la etiqueta usando atributos data-* */
         content: attr(data-label);
+        color: var(--primary-color);
     }
-     /* Añadir atributos data-label en index.html si usas esta parte responsive */
-     /* Ejemplo: <td data-label="Usuario">{{ item.username }}</td> */
+    
+    .color-count {
+        justify-content: flex-end;
+    }
 }
