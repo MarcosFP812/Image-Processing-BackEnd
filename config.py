@@ -12,6 +12,9 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_DATABASE_URI = None # Se definirá en subclases
 
+    UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploaded_images')
+
+
 class DevelopmentConfig(Config):
     """Configuración para desarrollo local."""
     DEBUG = True
